@@ -1,0 +1,29 @@
+/*This adhoc request was to pull together a list of Single-Service and CloudFront PPAs that were created since 6/30/2020 with the "Additional Identifier" and "Description" fields to identify Single-Service trends.
+
+Additional parameters requested include (i) CC matter number, (ii) contract status (In Progress and Executed), and (iii) Legal Support Task (Yes or No)
+*/
+
+SELECT DISTINCT
+    contracts.contractid
+    ,contracts.counter_party
+    ,contracts.additional_identifier
+    ,contracts.creation_date
+    ,contracts.contract_completion_date
+    ,contracts.description
+    ,contracts.contract_matter_num
+    ,contracts.status
+    ,cti.display_name
+    ,md.legal_support_task
+
+FROM legal_bi_andes.contracts as contracts
+LEFT OUTER JOIN legal_bi_andes.business_groups AS BG ON contracts.business_groupid = bg.business_groupid
+LEFT OUTER JOIN legal_bi_andes.contract_template_instance AS CTI ON contracts.contract_template_instanceid = cti.contracttemplateinstanceid
+LEFT OUTER JOIN report_central.aws_sales_contract_metadata AS md ON contracts.contractid = md.contractid
+
+/* This narrows down the list for private pricing agreements*/
+WHERE BG.display_name LIKE 'AWS Private Pricing%'
+AND contracts.creation_date > '2020-06-01'
+AND (cti.display_name LIKE '%CloudFront%' OR cti.display_name LIKE '%Single Service%')
+and contracts.status != 'Cancelled'
+/* This is intended to get rid of all of the dummy entries.  Since this is a small sample size, I cleaned up the rest using Excel but if it was a bigger universe, I can also exclude all cc matters that were created by legal team members*/
+AND LOWER(contracts.counter_party) NOT LIKE LOWER('%Test%')
